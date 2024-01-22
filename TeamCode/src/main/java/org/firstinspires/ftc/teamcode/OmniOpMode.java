@@ -87,7 +87,6 @@ public class OmniOpMode extends LinearOpMode {
 
         // Initialize all the hardware, using the hardware class. See how clean and simple this is?
         robot.init();
-
         waitForStart();
 
         // run until the end of the match (driver presses STOP)

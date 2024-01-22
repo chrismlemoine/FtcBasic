@@ -65,9 +65,18 @@ public class RobotHardware {
 
     // Define Drive constants.  Make them public, so they CAN be used by the calling OpMode
     public static final double MID_SERVO = 0.5 ;
-    public static final double HAND_SPEED = 0.02 ;  // sets rate to move servo
+    public static final double HAND_SPEED = 0.02 ; // sets rate to move servo
     public static final double ARM_UP_POWER = 0.45 ;
     public static final double ARM_DOWN_POWER = -0.45 ;
+
+    // Define Encoder constants. Make them public, so that CAN be used by the calling OpMode
+    public static final double COUNTS_PER_MOTOR_REV = 537.6 ; // NeverRest Orbital 20
+    public static final double DRIVE_GEAR_REDUCTION = 1.0 ; // No External Gearing.
+    public static final double WHEEL_DIAMETER_INCHES = 3.77953 ; // goBILDA® mecanum
+    public static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
+            (WHEEL_DIAMETER_INCHES * 3.1415);
+    public static final double AUTO_DRIVE_SPEED = 0.6;
+    public static final double AUTO_TURN_SPEED = 0.5;
 
     // Define a constructor that allows the OpMode to pass a reference to itself.
     public RobotHardware(LinearOpMode opmode) {
@@ -105,10 +114,23 @@ public class RobotHardware {
         rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
 
         // If there are encoders connected, switch to RUN_USING_ENCODER mode for greater accuracy
-        // leftFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        // leftBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        // rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        // rightBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        /*
+        leftFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBackDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBackDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        // Send telemetry message to indicate successful Encoder reset
+        telemetry.addData("Starting at", "%7d: %7d",
+                          leftFrontDrive.getCurrentPosition(), leftBackDrive.getCurrentPosition(),
+                          rightFrontDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition);
+        telemetry.update();
+         */
 
         // Define and initialize ALL installed servos.
         leftHand = myOpMode.hardwareMap.get(Servo.class, "left_hand");
@@ -206,11 +228,89 @@ public class RobotHardware {
     /**
      * Send the two hand-servos to opposing (mirrored) positions, based on the passed handOffset.
      *
-     * @param handOffset
+     * @param handOffset opposing positions (-1.0 to 1.0) +ve
      */
     public void setHandPositions(double handOffset) {
         handOffset = Range.clip(handOffset, -0.5, 0.5);
         leftHand.setPosition(MID_SERVO + handOffset);
         rightHand.setPosition(MID_SERVO - handOffset);
+    }
+
+    /*
+     *  Method to perform a relative move, based on encoder counts.
+     *  Encoders are not reset as the move is based on the current position.
+     *  Move will stop if any of three conditions occur:
+     *  1) Move gets to the desired position
+     *  2) Move runs out of time
+     *  3) Driver stops the OpMode running.
+     */
+
+    public void encoderDrive(double speed, double leftFrontInches, double leftBackInches,
+                             double rightFrontInches, double rightBackInches, double timeoutS){
+        int newLeftFrontTarget;
+        int newLeftBackTarget;
+        int newRightFrontTarget;
+        int newRightBackTarget;
+
+        // Ensure that the OpMode is still active
+        if (myOpMode.opModeIsActive()){
+
+            //Determine new target position, as pass to motor controller
+            newLeftFrontTarget = leftFrontDrive.getCurrentPosition() + (int)(leftFrontInches * COUNTS_PER_INCH);
+            newLeftBackTarget = leftBackDrive.getCurrentPosition() + (int)(leftBackInches * COUNTS_PER_INCH);
+            newRightFrontTarget = rightFrontDrive.getCurrentPosition() + (int)(rightFrontInches * COUNTS_PER_INCH);
+            newRightBackTarget = rightBackDrive.getCurrentPosition() + (int)(rightBackInches * COUNTS_PER_INCH);
+
+            leftFrontDrive.setTargetPosition(newLeftFrontTarget);
+            leftBackDrive.setTargetPosition(newLeftBackTarget);
+            rightFrontDrive.setTargetPosition(newRightFrontTarget);
+            rightBackDrive.setTargetPosition(newRightBackTarget);
+
+            // Turn On RUN_TO_POSITION
+            leftFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            leftBackDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            rightFrontDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            rightBackDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // Reset the timeout time and start motion.
+            runtime.reset();
+            leftFrontDrive.setPower(Math.abs(speed));
+            leftBackDrive.setPower(Math.abs(speed));
+            rightFrontDrive.setPower(Math.abs(speed));
+            rightBackDrive.setPower(Math.abs(speed));
+
+            // Keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.
+            // This is "safer" in the event that the robot will always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (myOpMode.opModeIsActive() &&
+                    (runtime.seconds() < timeoutS) &&
+                    (leftFrontDrive.isBusy() && leftBackDrive.isBusy() &&
+                            rightFrontDrive.isBusy() && rightBackDrive.isBusy())) {
+
+                // Display it for the driver.
+                myOpMode.telemetry.addData("Running to", " %7d :%7d", newLeftFrontTarget, newLeftBackTarget,
+                        newRightFrontTarget, newRightBackTarget);
+                myOpMode.telemetry.addData("Currently at", " at %7d :%7d",
+                        leftFrontDrive.getCurrentPosition(), leftBackDrive.getCurrentPosition(),
+                        rightFrontDrive.getCurrentPosition(), rightBackDrive.getCurrentPosition());
+                myOpMode.telemetry.update();
+            }
+            // Stop all motions:
+            leftFrontDrive.setPower(0);
+            leftBackDrive.setPower(0);
+            rightFrontDrive.setPower(0);
+            rightBackDrive.setPower(0);
+
+            // Turn off RUN_TO_POSITION
+            leftFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            leftBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            rightBackDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            myOpMode.sleep(250); // Optional pause after each move
+        }
     }
 }
