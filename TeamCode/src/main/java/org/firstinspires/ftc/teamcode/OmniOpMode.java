@@ -98,7 +98,24 @@ public class OmniOpMode extends LinearOpMode {
             turn = gamepad1.right_stick_x;
 
             // Combine drive and turn for blended motion. Use RobotHardware class
-            robot.driveRobot(drive, turn, strafe);
+            robot.driveRobot(drive, strafe, turn);
+
+            // This is test code:
+            //
+            // Uncomment the following code to test your motor directions.
+            // Each button should make the corresponding motor run FORWARD.
+            //   1) First, get all the motors to take to correct positions on the robot
+            //      by adjusting your Robot Configuration if necessary.
+            //   2) Then make sure they run in the correct direction by modifying the
+            //      the setDirection() calls above.
+            // Once the correct motors move in the correct direction, re-comment this code.
+            /*
+
+            if (gamepad1.x) robot.setDrivePower(1.0, 0.0, 0.0, 0.0);  // X gamepad
+            if (gamepad1.a) robot.setDrivePower(0.0, 1.0, 0.0, 0.0);  // A gamepad
+            if (gamepad1.y) robot.setDrivePower(0.0, 0.0, 1.0, 0.0);  // Y gamepad
+            if (gamepad1.b) robot.setDrivePower(0.0, 0.0, 0.0, 1.0);  // B gamepad
+            */
 
             // Use gamepad left & right Bumpers to open and close the claw
             // Use the SERVO constants defined in RobotHardware class.
