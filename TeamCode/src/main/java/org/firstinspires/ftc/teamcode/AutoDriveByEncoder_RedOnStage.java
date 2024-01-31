@@ -55,28 +55,55 @@ public class AutoDriveByEncoder_RedOnStage extends LinearOpMode {
     // Create a RobotHardware object to be used to access robot hardware.
     // Prefix any hardware functions with "robot." To access this class.
     RobotHardware robot = new RobotHardware(this);
+    RobotHardware.RedPixelDeterminationPipeline pipeline;
+    RobotHardware.RedPixelDeterminationPipeline.PixelPosition snapshotAnalysis = RobotHardware.RedPixelDeterminationPipeline.PixelPosition.LEFT; //default
 
     @Override
     public void runOpMode() {
 
         // Initialize all the hardware, using the hardware class. See how clean and simple this is?
         robot.init();
-        waitForStart();
 
-        // Step through each leg of the path,
-        // Note: Reverse movement is obtained by setting a negative distance (not speed)
+        pipeline = new RobotHardware.RedPixelDeterminationPipeline();
+        robot.webcam.setPipeline(pipeline);
 
-        // Strafe right 2.375 inches with a 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, 2.375,-2.375,-2.375,2.375, 5.0);
-        // Drive forward 27.5 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED,  27.5,  27.5, 27.5, 27.5, 5.0);
-        // Drive back 25.125 inches with a 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, -25.125, -25.125, -25.125, -25.125,5.0);
-        // Turn right 14.13717 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_TURN_SPEED, 14.13717, 14.13717, -14.13717, -14.13717, 5.0);
-        // Drive forward 45.5 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, 45.5, 45.5, 45.5, 45.5, 5.0);
+        // The INIT-loop: This REPLACES waitForStart!
+        while (!isStarted() && !isStopRequested()) {
+            telemetry.addData("Realtime analysis", pipeline.getAnalysis());
+            telemetry.update();
+            sleep(50);
+        }
 
+        snapshotAnalysis = pipeline.getAnalysis();
+
+        // Show that snapshot on the telemetry
+        telemetry.addData("Snapshot post-START analysis", snapshotAnalysis);
+        telemetry.update();
+
+        switch (snapshotAnalysis) {
+            case LEFT: {
+                // Your autonomous code
+                break;
+            } case RIGHT: {
+                // Your autonomous code
+                break;
+            } case CENTER: {
+                // Step through each leg of the path,
+                // Note: Reverse movement is obtained by setting a negative distance (not speed)
+
+                // Strafe right 2.375 inches with a 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED, 2.375,-2.375,-2.375,2.375, 5.0);
+                // Drive forward 27.5 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED,  27.5,  27.5, 27.5, 27.5, 5.0);
+                // Turn right 19 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_TURN_SPEED, 19, 19, -19, -19, 5.0);
+                // Drive forward 45 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED, 45, 45, 45, 45, 5.0);
+
+                break;
+            }
+
+        }
         telemetry.addData("Path", "Complete");
         telemetry.update();
         sleep(1000);  // pause to display final telemetry message.

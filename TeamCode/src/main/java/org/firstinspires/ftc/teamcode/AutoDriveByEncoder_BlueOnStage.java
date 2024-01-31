@@ -48,39 +48,64 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
  * This code uses the RUN_TO_POSITION mode to enable the Motor controllers to generate the run profile
  */
 
-@Autonomous(name="Auto Drive By Encoder (Red Off Stage)", group="Robot")
+@Autonomous(name="Auto Drive By Encoder (Blue On Stage)", group="Robot")
 
-public class AutoDriveByEncoder_RedOffStage extends LinearOpMode {
+public class AutoDriveByEncoder_BlueOnStage extends LinearOpMode {
 
     // Create a RobotHardware object to be used to access robot hardware.
     // Prefix any hardware functions with "robot." To access this class.
     RobotHardware robot = new RobotHardware(this);
+    RobotHardware.BluePixelDeterminationPipeline pipeline;
+    RobotHardware.BluePixelDeterminationPipeline.PixelPosition snapshotAnalysis = RobotHardware.BluePixelDeterminationPipeline.PixelPosition.LEFT; //default
 
     @Override
     public void runOpMode() {
 
         // Initialize all the hardware, using the hardware class. See how clean and simple this is?
         robot.init();
-        waitForStart();
 
-        // Step through each leg of the path,
-        // Note: Reverse movement is obtained by setting a negative distance (not speed)
+        pipeline = new RobotHardware.BluePixelDeterminationPipeline();
+        robot.webcam.setPipeline(pipeline);
 
-        // Strafe left 2.375 inches with a 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, -2.375,2.375,2.375,-2.375, 5.0);
-        // Drive forward 27.5 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED,  27.5,  27.5, 27.5, 27.5, 5.0);
-        // Drive back 4.75 inches with a 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, -4.75, -4.75, -4.75, -4.75,5.0);
-        // Strafe left 22.75 inches with a 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, -22.75,22.75,22.75,-22.75, 5.0);
-        // Drive forward 25.125 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, 25.125, 25.125, 25.125, 25.125, 5.0);
-        // Turn right 14.13717 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_TURN_SPEED, 14.13717, 14.13717, -14.13717, -14.13717, 5.0);
-        // Drive forward 91 Inches with 5 Sec timeout
-        robot.encoderDrive(robot.AUTO_DRIVE_SPEED, 91, 91, 91, 91, 5.0);
+        // The INIT-loop: This REPLACES waitForStart!
+        while (!isStarted() && !isStopRequested()) {
+            telemetry.addData("Realtime analysis", pipeline.getAnalysis());
+            telemetry.update();
+            sleep(50);
+        }
 
+        snapshotAnalysis = pipeline.getAnalysis();
+
+        // Show that snapshot on the telemetry
+        telemetry.addData("Snapshot post-START analysis", snapshotAnalysis);
+        telemetry.update();
+
+        switch (snapshotAnalysis) {
+            case LEFT: {
+                // Your autonomous code
+                break;
+            } case RIGHT: {
+                // Your autonomous code
+                break;
+            } case CENTER: {
+                // Step through each leg of the path,
+                // Note: Reverse movement is obtained by setting a negative distance (not speed)
+
+                // Strafe right 2.375 inches with a 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED, 2.375,-2.375,-2.375,2.375, 5.0);
+                // Drive forward 27.5 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED,  27.5,  27.5, 27.5, 27.5, 5.0);
+                // Drive back 25.125 inches with a 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED, -25.125, -25.125, -25.125, -25.125,5.0);
+                // Turn right 14.13717 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_TURN_SPEED, 14.13717, 14.13717, -14.13717, -14.13717, 5.0);
+                // Drive forward 45.5 Inches with 5 Sec timeout
+                robot.encoderDrive(RobotHardware.AUTO_DRIVE_SPEED, 45.5, 45.5, 45.5, 45.5, 5.0);
+
+                break;
+            }
+
+        }
         telemetry.addData("Path", "Complete");
         telemetry.update();
         sleep(1000);  // pause to display final telemetry message.
